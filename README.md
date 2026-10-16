@@ -30,3 +30,12 @@
 ./gradlew build
 ```
 Скомпилированный файл будет в папке `build/libs/elyhealpot-1.0.0.jar`.
+
+## 👥 Авторы и контрибьюторы
+
+* **[wellymode](https://github.com/wellymode)**
+* **Antigravity**
+
+## 📄 Лицензия
+
+Проект распространяется под лицензией [MIT](LICENSE).
