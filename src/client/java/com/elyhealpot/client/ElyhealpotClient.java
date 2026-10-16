@@ -22,6 +22,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.potion.Potions;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.Locale;
@@ -32,9 +33,22 @@ public class ElyhealpotClient implements ClientModInitializer {
     private static long cooldownDurationMs = 0L;
     private static long cooldownEndTimeMs = 0L;
 
-    // Ticking state
+    // Ticking and drink tracking state
     private static boolean wasUsingHeal2 = false;
     private static int lastUseTimeLeft = 0;
+    private static int initialHeal2Count = 0;
+    private static int drinkSlot = -1;
+    private static boolean drinkOffhand = false;
+
+    // Rollback detection state (fresh drink)
+    private static boolean watchingRollback = false;
+    private static long rollbackWatchExpiry = 0L;
+    private static int targetRollbackCount = 0;
+
+    // Secondary drink attempt while already cooling down
+    private static boolean watchingSecondaryDrink = false;
+    private static long secondaryWatchExpiry = 0L;
+    private static int secondaryTargetCount = 0;
 
     @Override
     public void onInitializeClient() {
@@ -104,11 +118,12 @@ public class ElyhealpotClient implements ClientModInitializer {
             );
         });
 
-        // Tick event to watch for item use finish
+        // Tick event to track drinking and watch for server rollback
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             ClientPlayerEntity player = client.player;
             if (player == null) {
                 wasUsingHeal2 = false;
+                watchingRollback = false;
                 return;
             }
 
@@ -116,18 +131,81 @@ public class ElyhealpotClient implements ClientModInitializer {
             ItemStack active = player.getActiveItem();
 
             if (isUsing && isHealing2Potion(active)) {
-                wasUsingHeal2 = true;
+                if (!wasUsingHeal2) {
+                    wasUsingHeal2 = true;
+                    initialHeal2Count = countHealing2Potions(player);
+                    drinkSlot = player.getInventory().getSelectedSlot();
+                    drinkOffhand = (player.getActiveHand() == Hand.OFF_HAND);
+                }
                 lastUseTimeLeft = player.getItemUseTimeLeft();
             } else {
                 if (wasUsingHeal2) {
-                    // If the item usage reached completion (<= 2 ticks remaining)
-                    if (lastUseTimeLeft <= 2) {
-                        triggerHealPotCooldown();
+                    // Player finished the drink animation (within 5 ticks of completion)
+                    if (lastUseTimeLeft <= 5) {
+                        onDrinkFinished();
                     }
                     wasUsingHeal2 = false;
                 }
             }
+
+            // Watch for server rollback: if server restores the potion, cancel cooldown immediately
+            if (watchingRollback) {
+                if (System.currentTimeMillis() > rollbackWatchExpiry) {
+                    watchingRollback = false;
+                } else {
+                    int currentCount = countHealing2Potions(player);
+                    if (currentCount >= targetRollbackCount) {
+                        // The potion returned! Server cancelled the drink. Cancel timer!
+                        resetCooldown();
+                        watchingRollback = false;
+                    }
+                }
+            }
+
+            // Watch for drink attempt while already cooling down:
+            if (watchingSecondaryDrink) {
+                if (System.currentTimeMillis() > secondaryWatchExpiry) {
+                    watchingSecondaryDrink = false;
+                } else {
+                    int currentCount = countHealing2Potions(player);
+                    if (currentCount < secondaryTargetCount) {
+                        // Count actually decreased! Server allowed the drink! Restart cooldown!
+                        triggerHealPotCooldown();
+                        watchingSecondaryDrink = false;
+                    }
+                    // If count didn't decrease (server rejected), do NOTHING: existing timer continues smoothly!
+                }
+            }
         });
+    }
+
+    public static void onDrinkFinished() {
+        long now = System.currentTimeMillis();
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        ClientPlayerEntity player = client.player;
+        int count = player != null ? countHealing2Potions(player) : 0;
+
+        if (initialHeal2Count <= 0) {
+            initialHeal2Count = count + 1;
+        }
+
+        // Case 1: If cooldown is ALREADY active, do NOT reset or overwrite it!
+        if (isHealPotCooldownActive()) {
+            // Player tried to drink while on cooldown.
+            // Server will reject this. We watch if count actually decreases.
+            // Only if count decreases (server actually allowed it) do we restart the cooldown.
+            watchingSecondaryDrink = true;
+            secondaryWatchExpiry = now + 900L;
+            secondaryTargetCount = count;
+            return;
+        }
+
+        // Case 2: Cooldown was NOT active: start it immediately!
+        triggerHealPotCooldown();
+        watchingRollback = true;
+        rollbackWatchExpiry = now + 900L;
+        targetRollbackCount = initialHeal2Count;
     }
 
     private static void sendInfo(net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource source) {
@@ -142,6 +220,18 @@ public class ElyhealpotClient implements ClientModInitializer {
         source.sendFeedback(Text.literal("§f/elyhealpot mode spacetimes §7— режим SpaceTimes (КД 18.4 сек)"));
         source.sendFeedback(Text.literal("§f/elyhealpot vanillacd <on|off> §7— включить/выключить числа на майнкрафтовском КД"));
         source.sendFeedback(Text.literal("§f/elyhealpot decimals <low|always|none> §7— режим десятых долей"));
+    }
+
+    public static int countHealing2Potions(ClientPlayerEntity player) {
+        if (player == null) return 0;
+        int count = 0;
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (isHealing2Potion(stack)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
     }
 
     public static boolean isHealing2Potion(ItemStack stack) {
@@ -183,10 +273,6 @@ public class ElyhealpotClient implements ClientModInitializer {
 
     public static synchronized void triggerHealPotCooldown() {
         long now = System.currentTimeMillis();
-        // Prevent rapid re-triggers within 800ms
-        if (now - cooldownStartTimeMs < 800L) {
-            return;
-        }
         cooldownStartTimeMs = now;
         cooldownDurationMs = (long) (ElyhealpotConfig.getInstance().getCooldownSeconds() * 1000.0f);
         cooldownEndTimeMs = now + cooldownDurationMs;

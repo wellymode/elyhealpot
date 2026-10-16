@@ -21,7 +21,7 @@ public abstract class LivingEntityMixin {
             MinecraftClient client = MinecraftClient.getInstance();
             if (self == client.player) {
                 if (ElyhealpotClient.isHealing2Potion(this.activeItemStack)) {
-                    ElyhealpotClient.triggerHealPotCooldown();
+                    ElyhealpotClient.onDrinkFinished();
                 }
             }
         }
