@@ -1,41 +1,41 @@
-# 🧪 ElyHealPot
+# ElyHealPot
 
-**ElyHealPot** — клиентский мод для Fabric (Minecraft 1.21.11), созданный для удобного отображения кулдаунов в хотбаре и инвентаре.
+ElyHealPot is a client-side Fabric mod for Minecraft 1.21.11 that displays cooldown indicators in the hotbar and inventory.
 
 ![Icon](src/main/resources/assets/elyhealpot/icon.png)
 
-## ⚡ Особенности
+## Features
 
-* **Симуляция КД зелий исцеления (II уровня):**
-  * При запитии зелья с эффектом Мгновенного исцеления II мод плавно анимирует классическую майнкрафтовскую шторку-шкалу, пустеющую сверху вниз по ходу КД.
-  * Если сервер уже накладывает ванильное КД (через `ItemCooldownManager`), мод автоматически отключает симуляцию шкалы, чтобы избежать дублирования.
-* **Крупные цифры кулдауна:**
-  * Отображаются в **левом верхнем углу** слота, не перекрывая количество предметов (stack count) в правом нижнем углу.
-* **Нативное майнкрафтовское КД:**
-  * Опциональный показ цифр кулдауна для любых стандартных предметов (эндер-жемчуг, плоды хоруса, щиты, заряды ветра и др.).
+- **Healing II Potion Cooldown Simulation:**
+  Simulates a cooldown animation (sweep overlay) when consuming Instant Health II potions. Automatically disables the simulated sweep if the server applies native Minecraft cooldowns.
+- **Top-Left Cooldown Numbers:**
+  Renders cooldown numbers in the top-left corner of the slot so they do not overlap item stack counts.
+- **Vanilla Cooldown Numbers:**
+  Optional display of cooldown numbers on native cooldown items (Ender Pearls, Chorus Fruit, Shields, Wind Charges, etc.).
 
-## ⌨️ Команды
+## Commands
 
-| Команда | Описание |
+| Command | Description |
 |---|---|
-| `/elyhealpot` | Показать статус и справку по командам |
-| `/elyhealpot mode funtime` | Установить кулдаун **20 секунд** (FunTime) |
-| `/elyhealpot mode spacetimes` | Установить кулдаун **18.4 секунд** (SpaceTimes) |
-| `/elyhealpot vanillacd <on\|off>` | Включить / выключить отображение цифр для ванильного КД |
-| `/elyhealpot decimals <low\|always\|none>` | Режим отображения десятых долей (по умолчанию `low` — десятые только при < 10 сек) |
+| `/elyhealpot` | Show current settings and available commands |
+| `/elyhealpot mode funtime` | Set healing potion cooldown to 20.0 seconds |
+| `/elyhealpot mode spacetimes` | Set healing potion cooldown to 18.4 seconds |
+| `/elyhealpot vanillacd <on\|off>` | Enable or disable cooldown numbers for vanilla items |
+| `/elyhealpot decimals <low\|always\|none>` | Configure decimal display mode (default: `low`, decimals when < 10s) |
 
-## 🛠 Сборка из исходников
+## Building
 
 ```bash
 ./gradlew build
 ```
-Скомпилированный файл будет в папке `build/libs/elyhealpot-1.0.0.jar`.
 
-## 👥 Авторы и контрибьюторы
+Compiled jar will be located at `build/libs/elyhealpot-1.0.0.jar`.
 
-* **[wellymode](https://github.com/wellymode)**
-* **Antigravity**
+## Authors
 
-## 📄 Лицензия
+- [wellymode](https://github.com/wellymode)
+- Antigravity
 
-Проект распространяется под лицензией [MIT](LICENSE).
+## License
+
+This project is licensed under the [MIT License](LICENSE).
