@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.elyhealpot.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ItemCooldownManagerMixin"
+  ],
+  "client": [
+    "DrawContextMixin",
+    "LivingEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

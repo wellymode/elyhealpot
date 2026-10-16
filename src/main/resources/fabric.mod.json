@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "elyhealpot",
+	"version": "${version}",
+	"name": "elyhealpot",
+	"description": "Cooldown indicators for healing potions and items in hotbar",
+	"authors": [
+		"Antigravity",
+		"milangelvi"
+	],
+	"contact": {},
+	"license": "MIT",
+	"icon": "assets/elyhealpot/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.elyhealpot.ElyhealpotMod"
+		],
+		"client": [
+			"com.elyhealpot.client.ElyhealpotClient"
+		]
+	},
+	"mixins": [
+		"elyhealpot.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
